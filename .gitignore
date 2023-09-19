@@ -1,6 +1,8 @@
 *.mat
 *.pdf
 *.png
+*.h5
+*.nwb
 .DS_Store
 *.ipynb_checkpoints
 *.ipynb

@@ -13,13 +13,12 @@ def test_pair(ensemble,spikeTrain2,n2,maxlag,Dc,reference_lag):
         reference_lag := lag of reference; if zero or negative reference lag=-l
     """
     # spike train pair I am going to test
-    # minimum value is subtracted from each element - used to shift the time axis so that the first event occurs at time 0 ??
+    # minimum value is subtracted from each element - used to shift the time axis so that the first event occurs at time 0 
     # check the dimensions and type of ensemble.Time!!!!
     # couple = np.concatenate((ensemble.Time - np.min(ensemble.Time), spikeTrain2 - np.min(spikeTrain2)), axis=1) 
     ensamble_time = ensemble['times'] - np.min(ensemble['times'])
     spike_train2 = spikeTrain2 - np.min(spikeTrain2) # move outside
-    #if np.min(spikeTrain2) != 0:
-        #print(np.min(spikeTrain2))
+    
     couple = np.hstack((ensamble_time.reshape(-1,1),spike_train2.reshape(-1,1)))
     nu = 2
     ntp = couple.shape[0] # trial length
@@ -31,13 +30,13 @@ def test_pair(ensemble,spikeTrain2,n2,maxlag,Dc,reference_lag):
     # creation of the parallel processes, one for each rate up to maxrate
     # and computation of the coincidence count for both neurons
     Zaa = [np.zeros_like(couple, dtype=np.uint8) for i in range(maxrate)]
-    ExpABi = np.zeros(maxrate) # what is it for?? added correction for continuity approximation (ExpAB limit and Yates correction) ???
+    ExpABi = np.zeros(maxrate) # added correction for continuity approximation (ExpAB limit and Yates correction)
     
     for i in range(1, maxrate+1):
         Zaa[i-1][couple >= i] = 1 
         # rest is used to later correct for continuity approximation
         col_sums = np.sum(Zaa[i-1], axis=0) # essentialy the sum of the '1's in the binary subprocess
-        ExpABi[i-1] = np.prod(col_sums) / couple.shape[0] # product of the sum of the '1's in the binary subprocess rate i-1 of the couple to be tested devided by the number of bins??
+        ExpABi[i-1] = np.prod(col_sums) / couple.shape[0] 
 
 
     """Get the best lag - the lag with the most coincidences"""
@@ -230,8 +229,7 @@ def test_pair(ensemble,spikeTrain2,n2,maxlag,Dc,reference_lag):
             varX[iii] = varT[iii] + varT[iii].T - covX[iii]-covX[iii].T
             varXtot = varXtot+varX[iii]
 
-        # everything before here revised
-
+      
         """____________________________________________"""
         X = TPrMTot-TPrMTot.T
         if np.abs(X[0,1]) > 0:

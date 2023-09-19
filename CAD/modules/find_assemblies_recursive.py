@@ -84,7 +84,7 @@ def find_assemblies_recursive(spiketrain_binned,maxlag,alph,gg,Dc,min_occurences
     significant_pairs = np.zeros((n_neurons,n_neurons))
     
     assembly_out = [] # [[]] * (n_neurons * n_neurons) 
-    #assembly_out = []
+   
 
     assembly_out_dim = (n_neurons * n_neurons)
 
@@ -144,7 +144,7 @@ def find_assemblies_recursive(spiketrain_binned,maxlag,alph,gg,Dc,min_occurences
 
     # second order and more: increase the assembly size by adding a new unit
     """__________________________increase the assembly size by adding a new unit_____________________________"""
-    agglomeration_size = 1 # current agglomeration size???
+    agglomeration_size = 1 
     element_added = True #  are new elememts added? if not stop while loop
 
     # while new units are added (Oincrement != 0) and the current size of assemblies is smaller than the maximal assembly order (O_th)
@@ -152,7 +152,7 @@ def find_assemblies_recursive(spiketrain_binned,maxlag,alph,gg,Dc,min_occurences
 
         element_added = False
         n_assem = len(assembly) # number of groups previously found
-        assembly_out = [[]]*(n_assem*n_neurons)# max possible dimension, then I cut
+        assembly_out = [[]]*(n_assem*n_neurons)
 
         nns = 1
         for w1 in range(n_assem): # runs over existing assemblies
@@ -219,7 +219,7 @@ def find_assemblies_recursive(spiketrain_binned,maxlag,alph,gg,Dc,min_occurences
                     indx = -1
                 if ism==-1:
                     # no matching assembly found
-                    assembly_final[nns-1] = assembly[i] # current asseembly added to thr final assembly
+                    assembly_final[nns-1] = assembly[i] # current asseembly added to the final assembly
                     selection[nns-1,0:nelement] = elem # The neurons in the assembly are added to selection at the corresponding row
                     selection[nns-1,nelement] = assembly[i]['pvalue'][-1] # p-value of the assembly is stored in selection
                     selection[nns-1,nelement+1] = i # The index of the assembly in the assembly list is stored in selection
@@ -249,7 +249,7 @@ def find_assemblies_recursive(spiketrain_binned,maxlag,alph,gg,Dc,min_occurences
     maxOrder = agglomeration_size
 
     """_________________________pruning step 1____________________________"""
-    # I remove assemblies whom elements are already ALL included in a bigger assembly
+    # I remove assemblies whose elements are already ALL included in a bigger assembly
 
     nns = 1
     
