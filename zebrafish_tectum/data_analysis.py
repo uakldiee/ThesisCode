@@ -28,15 +28,13 @@ from pylab import *
 import sys
 import time
 from modules.main_assemblies_detection import *
+import h5py
 
-# %% [markdown]
-# **Just a test**
 
 # %%
 thispath = os.path.abspath('..')
 path_data = thispath + '/' + 'data'
 pathdataread = path_data + '/' + '20230512_10Fishes'
-
 
 # %%
 def get_fish_names(folder):
@@ -87,7 +85,6 @@ def fullpath_file(datafolder,fishname,filetoread='GLUTAMATERGICS'):
             return (datafolder + '/' + file)
     raise ValueError(f"No file found for fish {fishname}\n in folder {datafolder}")
 
-
 # %%
 def get_assemblies_per_neurons(assembliesCells,n_cells):
   assem_neurons = pd.DataFrame(assembliesCells).T
@@ -108,11 +105,10 @@ def read_one_fish(datafolder,fishname):
     Reads ALL relevant data from one experiment folder,
     and returns a dataframe.
     """
-    #assert datafolder.is_dir(), f"Directory {datafolder} does not exist"
     glutfile = fullpath_file(datafolder,fishname,'GLUTAMATERGICS')
     cholfile = fullpath_file(datafolder,fishname,'CHOLINERGIC')
     clufile = fullpath_file(datafolder,fishname,'CLUSTERS')
-    # the \ is just a linebreak
+    
     rasterfile = datafolder + '/' + f"{fishname}_PART_1_stack_0_MultiPlane_RAW_RASTER.mat"
     # rasters for neurons
     rasters = loadmat(rasterfile)
@@ -122,18 +118,18 @@ def read_one_fish(datafolder,fishname):
     # glutamergic neurons
     glutamergic = loadmat(glutfile)
     cholinergic = loadmat(cholfile)
-    # flat to a single array, then convert to boolean
+    
     isglut = glutamergic["glutNeurons"].flatten().astype(bool)
     ischol = cholinergic["ch_neurons"].flatten().astype(bool)
     n_cells = len(spike_events)
     cells = list(range(0,n_cells))
-    # cell locations
+    # cell coordinates
     entrofile = fullpath_file(datafolder,fishname,'ENTROPIES_EH')
     entropy_all = loadmat(entrofile)
     cellxy = entropy_all["cell_xy"]
     cell_x = cellxy[:,0].tolist()
     cell_y = cellxy[:,1].tolist()
-    # let's add the plane too
+    # add the plane 
     cellsfile = fullpath_file(datafolder,fishname,'ALL_CELLS')
     cells_all = loadmat(cellsfile)
     theplanes = cells_all['fromPlane'].flatten().tolist()
@@ -154,19 +150,13 @@ def read_one_fish(datafolder,fishname):
 
 testdf = read_one_fish(pathdataread,'VG10')
 testdf
-
 # %%
 # Dataframe of all activity combined
-
 dfs = []
 for fish in fishes:
     dfs.append(read_one_fish(pathdataread, fish))
 spikes_df_all = pd.concat(dfs)
 spikes_df_all.sort_values(by=['fish', 'cell'], inplace=True)
-
-# %%
-spikes_df_all
-
 
 # %%
 # assemblies
@@ -195,7 +185,6 @@ def read_assemblies_one(datafolder,fishname):
          'std_dist':std_dist,\
           'entropy':entropy})     
     return dfret
-
 
 # %%
 dfs = []
@@ -231,7 +220,7 @@ average_ratios.set_index('fish', inplace=True)
 average_ratios
 
 # %%
-# attempts to show E/I composition within assemblies
+#  E/I composition within assemblies
 fish_array=[]
 cluster_array=[]
 e_num_array=[]
@@ -265,16 +254,15 @@ plt.hist(df_temp.e_num.values,alpha = 0.5,color ="grey")
 # %%
 def count_neurons(df_neurons):
   n_neus = df_neurons.shape[0]
-  n_e = df_neurons.isglut.values.sum() # count how many are true
+  n_e = df_neurons.isglut.values.sum() 
   n_i = n_neus - n_e
-  # also add the ratio, I am curious
+ 
   e_ratio = n_e / (n_e+n_i)
   n_neus_in_assembly = df_neurons[df_neurons['assemblies'].apply(len) > 0].shape[0]
   n_neus_no_assembly = df_neurons[df_neurons['assemblies'].apply(len) == 0].shape[0]
   neus_in_assembly_ratio = n_neus_in_assembly / n_neus
-  # this bit is important: I return a dataframe - it returns a series
-  return pd.Series({'n_neus':n_neus, 'n_e':n_e, 'n_i':n_i,'e_ratio':e_ratio, 'n_neus_in_assembly':n_neus_in_assembly,'n_neus_no_assembly':int(n_neus_no_assembly),'neus_in_assembly_ratio':neus_in_assembly_ratio})
 
+  return pd.Series({'n_neus':n_neus, 'n_e':n_e, 'n_i':n_i,'e_ratio':e_ratio, 'n_neus_in_assembly':n_neus_in_assembly,'n_neus_no_assembly':int(n_neus_no_assembly),'neus_in_assembly_ratio':neus_in_assembly_ratio})
 
 # %%
 
@@ -294,8 +282,6 @@ def assem_stats(df_assemblies):
     avg_assembly_size = df_assemblies["cluster_ncells"].mean()
     
     return pd.Series({'n_assemblies':n_assemblies,'avg_assembly_size':avg_assembly_size})
-
-
 # %%
 assem_stats = assemblies_df_all.groupby('fish').apply(assem_stats)
 for fish, row in assem_stats.iterrows():
@@ -348,7 +334,7 @@ def firing_rate_distributionsEverythingNormalised(path_data, fish):
     I_mean = np.mean(experiment_dataI)
     All_mean = np.mean(experiment_dataAll)
 
-    #bins = np.arange(np.min([E_min,I_min,All_min]), 0.01, 0.0003)
+    
     bins = np.arange(np.min([E_min,I_min,All_min]), 0.5, 0.02)
 
 
@@ -392,9 +378,6 @@ def firing_rate_distributionsEverythingNormalised(path_data, fish):
     
     print(f"Mean firing rate E: {np.mean(experiment_dataE)}")
     print(f"Mean firing rate I: {np.mean(experiment_dataI)}")
-
-    
-    #fig.savefig( thispath + '/' + 'zebrafish_tectum' + '/' + 'plots' + f"/{fish}_histogram_of_firing_rates.png")
     
     
     plt.show()
@@ -415,8 +398,7 @@ plt.xlabel('Assemby Size')
 plt.ylabel('Count')
 plt.title('Histogram of Assembly Sizes')
 plt.show() 
-fig.savefig( thispath + '/' + 'zebrafish_tectum' + '/' + 'plots' + f"/{fish}_histogram_of_assembly_sizes.png")
-
+#fig.savefig( thispath + '/' + 'zebrafish_tectum' + '/' + 'plots' + f"/{fish}_histogram_of_assembly_sizes.png")
 
 # %% [markdown]
 # ### Plot numbers of assemblies E/I neurons belong to
@@ -429,9 +411,9 @@ def neuron_assembly_distribution(fish,path_project):
     assemblies_per_neurons[0] = spikes_df_all["assemblies"].values.tolist() #  assemblies from all neurons
     assemblies_per_neurons[1] = spikes_df_all[spikes_df_all.isglut == 1]["assemblies"].values.tolist() # assemblies from exitatory neurons
     assemblies_per_neurons[2] = spikes_df_all[spikes_df_all.isglut == 0]["assemblies"].values.tolist() # assemblies from inhibitory neurons
-    # all other variable will have the same form - storing the data for all neuron_types
+    
 
-    # count the number of assemblies each neuron is part of for all neuron type settings
+    # count the number of assemblies each neuron is part of for all neuron types
     n_assemblies_per_neuron = [[] for i in range(3)]
     for index, neuron_type in enumerate(assemblies_per_neurons):
         for assemblies in neuron_type:
@@ -529,14 +511,13 @@ neuron_assembly_distribution("CTR05",thispath)
 def make_df_from_cell_per(cell_per_all,planes_all):
     df_temp_list = []
     for (k,pp) in enumerate(cell_per_all): # k - enumerates the neurons
-        pp = pp[0] # this is a matrix
-        theplane = planes_all[k][0] # this is a scalar
+        pp = pp[0] 
+        theplane = planes_all[k][0] 
         dftemp = pd.DataFrame({"plane":theplane,
-                    "neuron":k, # or as *padded* string f'neuron_{k:04d}'
+                    "neuron":k, 
                     "x_coord":pp[:,0],"y_coord":pp[:,1]})
         df_temp_list += [dftemp]            
     return pd.concat(df_temp_list)
-
 
 # %%
 def tectum_plot_centroids(fish, thispath):
@@ -554,7 +535,7 @@ def tectum_plot_centroids(fish, thispath):
     glut_file = fullpath_file(pathdataread,fish,'GLUTAMATERGICS')
     glutamergic = loadmat(glut_file)
 
-    glut = glutamergic["glutNeurons"][0]#np.array([ x[0] for x in glutamergic["glutNeurons"]])
+    glut = glutamergic["glutNeurons"][0]
     df_glut_temp = pd.DataFrame({"neuron":range(len(glut)), "is_glut":(glut == 1)})
     df_per_glut = df_per.merge(df_glut_temp,on='neuron',how='left')
 
@@ -566,19 +547,17 @@ def tectum_plot_centroids(fish, thispath):
         myax.set_aspect('equal')
         myax.axis('off')
         myax.set_title(f"Plane {plane}")
-        #theplot.suptitle(f"{fish}", fontsize=14)
+        
         myax.imshow(avg_all[:,:,plane-1],cmap="gray")
         for (neuron_and_glut,df_neuron) in df_plane.groupby(['neuron','is_glut']):
             _is_glut = neuron_and_glut[1]
             mycol = color_glut if _is_glut else color_nonglut
-            # this for the perimeter
-            #myax.plot(df_neuron['x_coord'],df_neuron['y_coord'],color=mycol,linewidth=0.5)
-            # now, centroids
+        
             xs = df_neuron['x_coord'].values
             ys = df_neuron['y_coord'].values
             xc = xs.mean()
             yc = ys.mean()
-            #marker='x',
+            
             myax.scatter(xc,yc,color=mycol,s=1)
     #theplot.savefig(thispath + '/' + 'zebrafish_tectum' + '/' + 'plots' + f"{fish}_tectum_plot_EI_neuron_centroids.pdf")
 
@@ -586,25 +565,28 @@ def tectum_plot_centroids(fish, thispath):
 # %%
 tectum_plot_centroids("CTR05",thispath)
 
-# %% [markdown]
-# Calculate average firing rates for each fish
-# Choose the fish with the highest avg firing rate
-#
+#%%
+spikes_df_all['spike_count'] = spikes_df_all['spike_activity'].apply(lambda x: np.sum(x))
+act = spikes_df_all[spikes_df_all['spike_count'] > 0]
 
 # %%
 # calculate the average firing rates of neurons for each fish
 
 mean_firing_rates = []
+mean_firing_rates_non_0 = []
 for fish in fishes:
-    mean_firing_rate = np.mean(firing_rates(spikes_df_all[spikes_df_all["fish"] == fish].spike_activity.values))
+    mean_firing_rate = np.mean(firing_rates(spikes_df_all[spikes_df_all["fish"] == fish].spike_events.values))
+    mean_firing_rate_non_0 = np.mean(firing_rates(act[act["fish"] == fish].spike_events.values))
     mean_firing_rates.append(mean_firing_rate)
-
+    mean_firing_rates_non_0.append(mean_firing_rate_non_0)
 mean_FR_per_fish = pd.DataFrame(\
         {'fish':fishes,\
-         'mean_firing_rate':mean_firing_rates})  
+         'mean_firing_rate':mean_firing_rates,\
+         'mean_firing_rate_non_0':mean_firing_rates_non_0})  
 fish_higest_FR = mean_FR_per_fish[mean_FR_per_fish["mean_firing_rate"]==np.max(mean_FR_per_fish.mean_firing_rate)].fish.values[0]
 print(fish_higest_FR)
-mean_FR_per_fish
+mean_FR_per_fish['mean_firing_rate'].mean()
+
 
 
 
@@ -650,15 +632,15 @@ def plot_50(fish_higest_FR,fish_higest_FR_50_spikes,thispath):
     experiment_df = fish_higest_FR_50_spikes
     n_cells = experiment_df.shape[0]
     for i in range(n_cells):
-        spikes.append([experiment_df.spike_activity.values[i],experiment_df.isglut.values[i]])
+        spikes.append([experiment_df.spike_events.values[i],experiment_df.isglut.values[i]])
 
     plotname = f"{fish_name}: Raster plot of 50 neurons with the highest firing rate "
     plt.rcParams["figure.figsize"] = [10, 5]
     plt.rcParams["figure.autolayout"] = True
     fig, axs = plt.subplots()
-    axs.set_ylabel("neurons",fontsize=18)
-    axs.set_xlabel(f"seconds",fontsize=18)
-    axs.set_title(plotname,fontsize=20)
+    axs.set_ylabel("neurons",fontsize=12)
+    axs.set_xlabel(f"seconds",fontsize=12)
+    axs.set_title(plotname,fontsize=15)
     spikes = np.array(spikes,dtype=object)
 
     for (row,spk) in enumerate(spikes):
@@ -741,18 +723,17 @@ spike count of {max_spike_count}.
 most_active_neuron = fish_df.loc[max_spike_count_index]
 most_active_spike_train = most_active_neuron['spikes_over_seconds']
 
-
 # %%
+
 
 def convolution_analysis(neuron_spike_train,gaus_kernel_size):
     # apply convolution to smooth the spike train
-    # Calculate the number of frames corresponding to the desired kernel width
+   
     frame_rate = 15  # Frame rate in Hz
     kernel_size = 1
     kernel_frames = int(kernel_size * frame_rate) # 0.5 second frame
     spike_times = np.where(most_active_spike_train == 1)[0]
 
-    ## kernel -  locally averages the signal over short periods of time
 
     # Create the rectangular kernel with the specified width
     kernel = np.ones(kernel_frames) / kernel_frames
@@ -772,8 +753,8 @@ def convolution_analysis(neuron_spike_train,gaus_kernel_size):
     # second plot - take fixed bins and compute the firing rate as a funtion of time 
     plt.subplot(4, 1, 2)
     plt.suptitle(f"{fish}: most active neuron", fontsize=12)
-    # Define the bin width (in time units, e.g., seconds)
-    bin_width = 4  # Adjust this to your desired bin width
+    
+    bin_width = 4  
 
     # Calculate the number of bins and create an array of bin edges
     num_bins = len(most_active_spike_train) // bin_width
@@ -807,7 +788,7 @@ def convolution_analysis(neuron_spike_train,gaus_kernel_size):
 
 
     # Plot the Gaussian kernel - still averaging - a weighted average, with less weigth at the edges
-    #gaus_kernel_size = 100 # Larger kernel sizes result in smoother curves - trade-off between capturing fine details and achieving smooth results
+    # Larger kernel sizes result in smoother curves - trade-off between capturing fine details and achieving smooth results
     gaussian_kernel = np.exp(-0.5 * (np.linspace(-10, 10, gaus_kernel_size) / 2)**2)
     gaussian_kernel /= gaussian_kernel.sum() # normalized to ensure that its values sum up to 1
     convolved_spike_train_gaussian = np.convolve(most_active_spike_train, gaussian_kernel, mode='same')
@@ -855,48 +836,12 @@ compact_assemblies_assend_entropy = compact_assemblies.sort_values(by='entropy',
 # order the neurons in correlation matrix by assembly
 order_by_assemblies = np.concatenate(compact_assemblies_assend_entropy["cluster_cells"].values)
 
-# Create a DataFrame from the order array
 order_df = pd.DataFrame({'cell': order_by_assemblies})
 
 # Merge the order DataFrame with the original DataFrame to reorder the rows
 ordered_by_assembly_df = order_df.merge(neuorns_in_compact, on='cell')
 ordered_by_assembly_df
 
-
-# %%
-'''# Calculate the correlation matrix
-# not ordered neurons - neuorns_in_compact
-# neurons ordered by assembly - ordered_by_assembly_df
-spike_trains_assem = np.array(neuorns_in_compact["convolved_spikes"].values.tolist())
-num_neurons = len(spike_trains_assem)
-
-corr_matrix = np.zeros((num_neurons, num_neurons))
-for i in range(num_neurons):
-    corr_matrix[i, i] = 1.0
-    for j in range(i+1,num_neurons):
-        corr, _ = pearsonr(spike_trains_assem[i], spike_trains_assem[j])
-        corr_matrix[i, j] = corr
-        corr_matrix[j, i] = corr
-
-# plotting the correlation matrix
-fig, axs = plt.subplots()
-sns.heatmap(corr_matrix, cmap='coolwarm', center=0, vmin=-1, vmax=1)
-
-# Add labels and title
-plt.xlabel('Neuron ID')
-plt.ylabel('Neuron ID')
-plt.title(f'{fish} Correlation Matrix')
-plt.gca().set_aspect('equal')
-plt.xticks(fontsize=5.5)
-plt.yticks(fontsize=5.5)
-plt.xticks(rotation=90, ha='right')
-plt.subplots_adjust(bottom=0.15)
-
-plt.yticks(rotation=0, ha='right')
-plt.subplots_adjust(left=0.15)
-
-
-plt.show()'''
 
 
 # %%
@@ -929,11 +874,17 @@ def corr_matrix_calc(df,corr_type,fish):
     plt.subplots_adjust(left=0.15)
     #plt.savefig(thispath + '/' + 'zebrafish_tectum' + '/' + 'plots' + f"/{fish}_correlation_matrix_{corr_type}.pdf")
 
-    # Show the plot
     plt.show()
     return corr_matrix
 
+#%%
 
+act["spikes_over_seconds"] = act["spike_events"].apply(frames_to_seconds)
+act_VG01 = act[act['fish'] == 'VG01']
+act_VG01["convolved_spikes"] = act_VG01["spikes_over_seconds"].apply(convolve_trains,args=(100, "gaussian"))
+act_VG01
+#%%
+corr_all_active = corr_matrix_calc(act_VG01,"all_filtered_neurons",fish_higest_FR)
 # %%
 # Calculate the correlation matrix
 # not ordered neurons - neuorns_in_compact
@@ -942,8 +893,6 @@ corr_all = corr_matrix_calc(neuorns_in_compact,"all_filtered_neurons",fish_higes
 #corr_ordered = corr_matrix_calc(ordered_by_assembly_df,"ordered_by_assembly",fish_higest_FR)
 
 # %%
-#plot_50(fish_higest_FR,fish_higest_FR_50_spikes,thispath)
-neuorns_in_compact
 #create a new column with neuron firing rates
 neuorns_in_compact["firing_rate"] = neuorns_in_compact["spikes_over_seconds"].apply(np.sum) / neuorns_in_compact["spikes_over_seconds"].apply(len)
 
@@ -953,11 +902,18 @@ neuorns_in_compact_ordered_by_FR = neuorns_in_compact.sort_values(by=['firing_ra
 # select the top 50 neurons
 neuorns_in_compact_ordered_by_FR_50 = neuorns_in_compact_ordered_by_FR[:50]
 
-
+#%%
+np.concatenate(neuorns_in_compact_ordered_by_FR_50.assemblies.values)
+cluster_counts = neuorns_in_compact_ordered_by_FR_50['assemblies'].apply(pd.Series).stack().value_counts()
+cluster_counts
 # %%
 plot_50(fish_higest_FR,neuorns_in_compact_ordered_by_FR_50,thispath)
 coor_m_50 = corr_matrix_calc(neuorns_in_compact_ordered_by_FR_50,"50",fish_higest_FR)
 
+#%%
+fish_higest_FR_50_spikes["convolved_spikes"] = fish_higest_FR_50_spikes["spikes_over_seconds"].apply(convolve_trains,args=(100, "gaussian"))
+#%%
+coor_m_50_not_filtered = corr_matrix_calc(fish_higest_FR_50_spikes,"50_2",fish_higest_FR)
 
 # %%
 # the average corralation
@@ -977,18 +933,27 @@ def average_correlation(corr_matrix):
 # %%
 average_correlation(coor_m_50)
 
+#%%
+average_correlation(corr_all)
+
+#%%
+average_correlation(coor_m_50_not_filtered)
+#%%
+average_correlation(corr_all_active)
+
 # %% [markdown]
-# * Plot a raster plot with neuons ordered by assembly with E/I - only compact assemblies  check
-# * Choose ye eye two assemblies that look visualy different                               check
-# * calculate a correlation matrix for these two asemblies order the neuons by assembly    check
-# * calculate the average correaltion for both, and inbetween                              check
+# * Plot a raster plot with neuons ordered by assembly with E/I - only compact assemblies  
+# * Choose by eye two assemblies that look visualy different                               
+# * calculate a correlation matrix for these two asemblies, order the neuons by assembly    
+# * calculate the average correaltion for both, and inbetween           
 
 # %%
 # plotting the distributiion of entropy values
 # entropy here provides a measure of the variability or spread of distances within an assembly
 # Higher entropy indicates greater variability in the distances - more dispersed or spread-out assembly 
 # while lower entropy indicates more consistent or concentrated distances between neurons - more compact assembly
-# 
+
+
 assemblies["entropy"].values
 entropy_values = np.array(assemblies["entropy"].values)
 
@@ -1000,7 +965,7 @@ sns.kdeplot(entropy_values, shade=True)
 plt.xlabel('Entropy')
 plt.ylabel('Density')
 plt.axvline(mean_entropy, color='red', linestyle='dashed', linewidth=2, label='Mean')
-plt.title(f'{fish} Distribution of Entropy Values')
+plt.title('VG01: Distribution of Entropy Values')
 plt.legend()
 plt.show()
 
@@ -1046,7 +1011,6 @@ compact_assemblies = assemblies_df[assemblies_df['entropy'] <= median_entropy]
 #compact_assemblies.reset_index(drop=True, inplace=True)
 compact_assemblies.iloc[[1,56]]
 
-
 # %%
 def neural_activity_by_assembly_plot_EI(fish_higest_FR,assemblies_df,matrix,fig_x,fig_y,what_to_plot):
     color = "black"
@@ -1062,8 +1026,6 @@ def neural_activity_by_assembly_plot_EI(fish_higest_FR,assemblies_df,matrix,fig_
         assembly_size += len(assembly)
         assembly_devider.append(assembly_size)
         for neuron in assembly:
-            # neuron-1 because spikes for neuron 1 are stored in spikes_per_neuron at index 0 etc.
-            # appends a list (spikes - list , isglut - number 0/1)
             spikes_by_assembly.append([np.array(spikes_per_neuron[neuron]),iglut[neuron]])
         
     spikes_by_assembly = np.array(spikes_by_assembly,dtype=object)
@@ -1096,7 +1058,6 @@ def neural_activity_by_assembly_plot_EI(fish_higest_FR,assemblies_df,matrix,fig_
 
 # %%
 neural_activity_by_assembly_plot_EI(fish_higest_FR,compact_assemblies,matrix,21,42,"spikes_over_seconds")
-
 # %%
 neural_activity_by_assembly_plot_EI(fish_higest_FR,compact_assemblies.iloc[[1,56]],matrix,21,7,"spikes_over_seconds")
 
@@ -1112,33 +1073,17 @@ ordered_by_two_assem = ordered_by_two_assem.set_index('cell').loc[two_assemblies
 coor_m_two_assem = corr_matrix_calc(ordered_by_two_assem,"two_assem",fish_higest_FR)
 
 
-# %%
-# VG10 fish example
-'''VG10_assem = assemblies_df_all[assemblies_df_all["fish"] == "VG10"]
-assem1_ids = VG10_assem[VG10_assem['cluster_id'] == 2].cluster_cells.values -1
-assem2_ids = VG10_assem[VG10_assem['cluster_id'] == 5].cluster_cells.values -1
-both_assem_ids = np.concatenate((assem1_ids,assem2_ids),axis = 0)
-both_assem_ids = np.concatenate(both_assem_ids)
-
-fish_temp = spikes_df_all[spikes_df_all["fish"] == "VG10"]
-fish_temp["convolved_spikes"] = fish_temp["spikes_over_seconds"].apply(convolve_trains,args=(0.5, "rectangle"))
-ordered_by_two_assem = fish_temp[fish_temp['cell'].isin(both_assem_ids)]
-ordered_by_two_assem = ordered_by_two_assem.set_index('cell').loc[both_assem_ids].reset_index()
-np.sum(ordered_by_two_assem.iloc[0].spikes_over_seconds)
-ordered_by_two_assem
-
-coor_m_two_assem = corr_matrix_calc(ordered_by_two_assem,"two_assem","VG10")'''
-
 
 # %%
 avg_corr_assem_1 = average_correlation(coor_m_two_assem[:55,:55])
 avg_corr_assem_2 = average_correlation(coor_m_two_assem[54:,54:])
+#%%
+average_correlation(coor_m_two_assem[54:,:55])
 
 # %% [markdown]
-# * look at the ISI of the two assemblies
-# * try to get rid of noice in both
+# * try to get rid of noise in both
 # * run CAD for both
-# * lower p values threshold
+# * try lowering p values threshold
 
 # %%
 assem1 = ordered_by_two_assem.iloc[:55]
@@ -1148,46 +1093,25 @@ assem2 = ordered_by_two_assem.iloc[54:]
 matrix = spikes_df_all[spikes_df_all["fish"] == fish_higest_FR]
 matrix["spike_count"] =  matrix['spikes_over_seconds'].apply(lambda x: np.sum(x))
 
-# %%
-'''def delete_isolated_spikes(spike_train, window=100):
-    # Convert the list to a numpy array for efficient computation
-    spike_train = np.array(spike_train)
-
-    # Find the indices of the spikes
-    spike_indices = np.where(spike_train == 1)[0]
-
-    # For each spike, check if there's another spike in the window
-    for i in spike_indices:
-        # Get the start and end of the window
-        start = max(0, i - window)
-        end = min(len(spike_train), i + window)
-
-        # Check if there's another spike in the window
-        if np.sum(spike_train[start:i]) == 0 and np.sum(spike_train[i+1:end]) == 0:
-            # If not, delete the spike
-            spike_train[i] = 0
-
-    return spike_train'''
 
 # %%
+# plot raster of one neuron to check if removing isolated neurons worked
 spike_train = np.array(matrix[matrix["cell"] == 1762].spikes_over_seconds.values[0])
 
-# Find the indices of the spikes
+
 spike_indices = np.where(spike_train == 1)[0]
 rcParams['figure.figsize']=(100,3)
-plot(spike_indices, np.ones_like(spike_indices), '.')  # Plot spikes as a row,
-#xlim([0, 5])                                # ... display times (0, 5) s
-xlabel('Time (s)')                          # ... label the x-axis
-yticks([])  # ... remove y-axis ticks
-# set x ticks every 100 seconds
+plot(spike_indices, np.ones_like(spike_indices), '.')                                
+xlabel('Time (s)')                          
+yticks([])  
+
 xticks(np.arange(0, len(spike_train), 100))
                                 
 show()
 
-
-# %%
+#%%
 def delete_isolated_spikes_new(spike_train, window=100, spike_window=4):
-    # Convert the list to a numpy array for efficient computation
+    
     spike_train = np.array(spike_train)
 
     # Find the indices of the spikes
@@ -1214,41 +1138,16 @@ def delete_isolated_spikes_new(spike_train, window=100, spike_window=4):
 
 
 # %%
-'''def delete_isolated_spikes(spike_train, window=100, spike_window=4):
-    # Convert the list to a numpy array for efficient computation
-    spike_train = np.array(spike_train)
-
-    # Find the indices of the spikes
-    spike_indices = np.where(spike_train == 1)[0]
-
-    # Group consecutive indices together
-    super_spikes = np.split(spike_indices, np.where(np.diff(spike_indices) > spike_window)[0] + 1) 
-
-    # For each super spike, check if there's another super spike in the window
-    for super_spike in super_spikes:
-        # Get the start and end of the window
-        start = max(0, super_spike[0] - window)
-        end = min(len(spike_train), super_spike[-1] + window)
-
-        # Check if there's another super spike in the window
-        for other_super_spike in super_spikes:
-            if (other_super_spike is not super_spike and (start <= other_super_spike[0] <= end or start <= other_super_spike[-1] <= end)):
-                # If not, delete the super spike
-                spike_train[super_spike] = 0
-
-    return spike_train'''
-
-# %%
 
 spike_train = np.array(delete_isolated_spikes_new(matrix[matrix["cell"] == 1762].spikes_over_seconds.values[0], window=100,spike_window=4))
 
 # Find the indices of the spikes
 spike_indices = np.where(spike_train == 1)[0]
 rcParams['figure.figsize']=(100,3)
-plot(spike_indices, np.ones_like(spike_indices), '.')  # Plot spikes as a row,
-#xlim([0, 5])                                # ... display times (0, 5) s
-xlabel('Time (s)')                          # ... label the x-axis
-yticks([])                                  # ... remove y-axis ticks
+plot(spike_indices, np.ones_like(spike_indices), '.')  
+
+xlabel('Time (s)')                          
+yticks([])                                  
 show()
 
 # %%
@@ -1263,8 +1162,7 @@ neural_activity_by_assembly_plot_EI(fish_higest_FR,compact_assemblies.iloc[[1,56
 # %%
 neural_activity_by_assembly_plot_EI(fish_higest_FR,compact_assemblies.iloc[[1,56]],matrix,21,7,"spikes_over_seconds")
 
-# %%
-matrix
+
 
 # %%
 convolution_analysis(matrix.iloc[matrix['filtered_spike_count'].idxmax()].filtered_spikes,100)
@@ -1282,54 +1180,53 @@ corr_filtered = corr_matrix_calc(active_neurons,"blabla","VG01")
 # %%
 average_correlation(corr_filtered)
 
-# %%
-assem1
+
 
 # %%
 two_assemblies_cells_ids[:55]
 assem1["filtered_spikes"] = assem1["spikes_over_seconds"].apply(delete_isolated_spikes_new, window=10,spike_window=4)
 
-# %%
-# get only fish and filtered spikes columns
-fish_filtered_spikes = matrix[["fish","spikes_over_seconds"]]
-fish_filtered_spikes = fish_filtered_spikes.filtered_spikes.values
 
 # %%
 assem1_for_CAD = assem1[["fish","spikes_over_seconds"]]
 assem1_for_CAD = assem1_for_CAD.spikes_over_seconds.values
+#%%
+assem2_for_CAD = assem2[["fish","spikes_over_seconds"]]
+assem2_for_CAD = assem2_for_CAD.spikes_over_seconds.values
 
 # %%
-spM = [[]]*len(assem1_for_CAD)
+spM_assem1 = [[]]*len(assem1_for_CAD)
 for i in range(len(assem1_for_CAD)):
     
     spike_train = assem1_for_CAD[i]
     time_train = np.arange(len(spike_train)) 
     spike_times = time_train[spike_train == 1]
-    spM[i] = spike_times
+    spM_assem1[i] = spike_times
+
+#%%
+spM_assem2 = [[]]*len(assem2_for_CAD)
+for i in range(len(assem2_for_CAD)):
+    
+    spike_train = assem2_for_CAD[i]
+    time_train = np.arange(len(spike_train)) 
+    spike_times = time_train[spike_train == 1]
+    spM_assem2[i] = spike_times
 
 # %%
-max_len = max(len(arr) for arr in spM)
+max_len = max(len(arr) for arr in spM_assem1)
 # Pad each array with NaN values up to the maximum length because that how the data looks in CAD Russo example
-spM = [np.pad(np.array(arr, dtype=float), (0, max_len - len(arr)), mode='constant', constant_values=np.nan) for arr in spM]
-spM = np.array(spM)
-spM.shape
-spM
+spM_assem1 = [np.pad(np.array(arr, dtype=float), (0, max_len - len(arr)), mode='constant', constant_values=np.nan) for arr in spM_assem1]
+spM_assem1 = np.array(spM_assem1)
+spM_assem1.shape
+spM_assem1
+#%%
+max_len = max(len(arr) for arr in spM_assem2)
+# Pad each array with NaN values up to the maximum length because that how the data looks in CAD Russo example
+spM_assem2 = [np.pad(np.array(arr, dtype=float), (0, max_len - len(arr)), mode='constant', constant_values=np.nan) for arr in spM_assem2]
+spM_assem2 = np.array(spM_assem2)
+spM_assem2.shape
+spM_assem2
 
-# %%
-BinSizes = [0.1,0.5,1,1.5,2,3]#[0.1, 0.50,1,10]#[0.015 , 0.025, 0.04, 0.06, 0.085, 0.15, 0.25, 0.4, 0.6, 0.85, 1.5] # [1.5]
-MaxLags= [10,10,10,10,10,10]# [10, 10, 10, 10, 10, 10, 10, 10, 10, 10, 10]
-start_time = time.time()
 
-assembly = main_assemblies_detection(spM,MaxLags,BinSizes,alph = 0.05)
-
-end_time = time.time()
-execution_time = end_time - start_time
-print("Execution time:", execution_time, "seconds")
-
-# %%
-assembly['bin'][4]
-
-# %%
-assembly_assem1_01_filtered
 
 # %%
